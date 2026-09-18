@@ -26,9 +26,15 @@ def calcular_total(conn, pedido_id):
     for row in _linhas(conn, "estornos", pedido_id):
         estornado += row[2]
 
+    # Frete grátis a partir de 150 de produtos (subtotal ANTES do cupom).
     frete = 0.0 if subtotal >= 150 else frete_cheio
 
-    total = subtotal + frete
-    desconto = min(cupom, total)
-    total = total - desconto - estornado
+    # O cupom desconta SÓ os produtos: o teto do desconto é o subtotal,
+    # nunca o subtotal + frete. Assim o cupom não pode zerar o frete nem
+    # virar troco quando for maior que o pedido.
+    desconto = min(cupom, subtotal)
+    if desconto < 0:
+        desconto = 0.0
+
+    total = (subtotal - desconto) + frete - estornado
     return round(total, 2)
